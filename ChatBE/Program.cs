@@ -54,4 +54,9 @@ app.UseCors("CorsPolicy");
 
 app.MapControllers();
 
+app.UseWebSockets();
+
+// KeepAliveInterval: How frequently to send "ping" frames to the client to nsure proxies keep the connection open.
+// AllowedOrigins: A list of allowed origin header values for WebSocket requests. By default, all origins are allowed. 
+
 app.Run();
