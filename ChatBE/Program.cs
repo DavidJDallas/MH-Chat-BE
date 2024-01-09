@@ -43,7 +43,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-
+var webSocketOptions = new WebSocketOptions
+{
+    KeepAliveInterval = TimeSpan.FromMinutes(2)
+    
+};
 
 
 app.UseHttpsRedirection();
@@ -54,7 +58,7 @@ app.UseCors("CorsPolicy");
 
 app.MapControllers();
 
-app.UseWebSockets();
+app.UseWebSockets(webSocketOptions);
 
 // KeepAliveInterval: How frequently to send "ping" frames to the client to nsure proxies keep the connection open.
 // AllowedOrigins: A list of allowed origin header values for WebSocket requests. By default, all origins are allowed. 
