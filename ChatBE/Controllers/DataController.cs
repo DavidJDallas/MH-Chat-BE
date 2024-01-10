@@ -28,10 +28,17 @@ public class WebSocketController : ControllerBase
 //Method below echos back the message to the client.
 private static async Task Echo(WebSocket webSocket)
 {
+    //A buffer is a temporary data storage area used to hold data that is being transferred between 2 locations or processes that operate at different speeds or within different characteristics. 
+
+
+    // Create an array of bytes of size 4096 (4mb) to temporarily store data.
     var buffer = new byte[1024 * 4];
+    Console.WriteLine($"Buffer: {buffer}");
 
     var receiveResult = await webSocket.ReceiveAsync(
         new ArraySegment<byte>(buffer), CancellationToken.None);
+
+    Console.WriteLine(receiveResult);
 
     while (!receiveResult.CloseStatus.HasValue)
     {
