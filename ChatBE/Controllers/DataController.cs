@@ -11,12 +11,28 @@ namespace DataStoreApi.Controllers;
 
 public class WebSocketController : ControllerBase
 {
+    // A list to hold all connected clients
+    private static List<(WebSocket, WebSocket?)> _socketPairs = new List<(WebSocket, WebSocket?)>();
+
     [Route("/ws")]
     public async Task Get()
     {
+        //If it's a websocket request, execute below block.
         if (HttpContext.WebSockets.IsWebSocketRequest)
         {
-            using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+            var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+            var unpairedSocket = _socketPairs.FirstOrDefault(pair => pair.Item2 == null);
+            if (unpairedSocket.Item1 != null)
+            {
+                // If there's an unpaired client, pair them with the new client
+                _socketPairs.Remove(unpairedSocket);
+                _socketPairs.Add((unpairedSocket.Item1, webSocket));
+            }
+            else
+            {
+                // If there's no unpaired client, add the new client as an unpaired client
+                _socketPairs.Add((webSocket, null));
+            }
             await Echo(webSocket);
         }
         else
@@ -25,46 +41,27 @@ public class WebSocketController : ControllerBase
         }
     }
 
-//Method below echos back the message to the client.
-private static async Task Echo(WebSocket webSocket)
-{
-    //A buffer is a temporary data storage area used to hold data that is being transferred between 2 locations or processes that operate at different speeds or within different characteristics. 
-
-
-    // Create an array of bytes of size 4096 (4mb) to temporarily store data. Remeber that primitive data types don't need new operators but certain data types do.
-    var buffer = new byte[1024 * 4];    
-
-
-    //Method that waits for data to be received from the WebSocket. The data is then stored in the buffer. Async so won't block rest of the data while it waits. 
-
-    //ArraySegment<T> is a wrapped around an array that delimits a range of elements in that array. The original array must be 1-dimensional and have zero-based indexing. 
-
-    var receiveResult = await webSocket.ReceiveAsync(
-        new ArraySegment<byte>(buffer), CancellationToken.None
-    );
-
-    //Loop conditional below will continue as long as the WebSocket connection remains open. 
-    while (!receiveResult.CloseStatus.HasValue)
+    private static async Task Echo(WebSocket webSocket)
     {
-        //The 'echo' part - the data that was just received is sent back over the WebSocket. 
-        await webSocket.SendAsync(
-            new ArraySegment<byte>(buffer, 0, receiveResult.Count),
-            receiveResult.MessageType,
-            receiveResult.EndOfMessage,
-            CancellationToken.None);
+        var buffer = new byte[1024 * 4];
+        var receiveResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
-        //Reassigning receiveResult to receive the next chunk of data from the WebSocket. Allows the method to process a continous stream of data chunks from the WebSocket. Each iteration of the while loop handles one chunk of data. 
-        receiveResult = await webSocket.ReceiveAsync(
-            new ArraySegment<byte>(buffer), CancellationToken.None
-            );
+        while (!receiveResult.CloseStatus.HasValue)
+        {
+            // Find the client's pair and send the message to them
+            var pair = _socketPairs.FirstOrDefault(p => p.Item1 == webSocket || p.Item2 == webSocket);
+            var otherSocket = pair.Item1 == webSocket ? pair.Item2 : pair.Item1;
+            if (otherSocket != null && otherSocket.State == WebSocketState.Open)
+            {
+                await otherSocket.SendAsync(new ArraySegment<byte>(buffer, 0, receiveResult.Count), receiveResult.MessageType, receiveResult.EndOfMessage, CancellationToken.None);
+            }
+
+            receiveResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+        }
+
+        await webSocket.CloseAsync(receiveResult.CloseStatus.Value, receiveResult.CloseStatusDescription, CancellationToken.None);
+        // Remove the client and their pair when they disconnect
+        var pairToRemove = _socketPairs.FirstOrDefault(p => p.Item1 == webSocket || p.Item2 == webSocket);
+        _socketPairs.Remove(pairToRemove);
     }
-
-
-    //Once the WebSocket connection is closed (!receiveResult.CloseStatus.HasValue !== true) then close the WebSocket as per below:
-    await webSocket.CloseAsync(
-        receiveResult.CloseStatus.Value,
-        receiveResult.CloseStatusDescription,
-        CancellationToken.None);
 }
-}
-
