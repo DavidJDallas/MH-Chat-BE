@@ -31,14 +31,17 @@ private static async Task Echo(WebSocket webSocket)
     //A buffer is a temporary data storage area used to hold data that is being transferred between 2 locations or processes that operate at different speeds or within different characteristics. 
 
 
-    // Create an array of bytes of size 4096 (4mb) to temporarily store data.
-    var buffer = new byte[1024 * 4];
-    Console.WriteLine($"Buffer: {buffer}");
+    // Create an array of bytes of size 4096 (4mb) to temporarily store data. Remeber that primitive data types don't need new operators but certain data types do.
+    var buffer = new byte[1024 * 4];    
 
+
+    //Method that waits for data to be received from the WebSocket. The data is then stored in the buffer. Async so won't block rest of the data while it waits. 
+
+    //ArraySegment<T> is a wrapped around an array that delimits a range of elements in that array. The original array must be 1-dimensional and have zero-based indexing. 
+    
     var receiveResult = await webSocket.ReceiveAsync(
-        new ArraySegment<byte>(buffer), CancellationToken.None);
-
-    Console.WriteLine(receiveResult);
+        new ArraySegment<byte>(buffer), CancellationToken.None
+    );
 
     while (!receiveResult.CloseStatus.HasValue)
     {
