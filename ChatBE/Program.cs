@@ -1,18 +1,13 @@
-using DataStoreApi.Models;
-using DataStoreApi.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using DataStoreApi.Models;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
-//builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("WeatherServerDatabase"));
-
 builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("ChatServerDatabase"));
 
-//Below the DataService Class is registered with depdency injection to support constructor injection in consuming classes.
-builder.Services.AddSingleton<DataService>();
 
 // Add services to the container.
 
