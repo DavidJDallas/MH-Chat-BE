@@ -38,23 +38,29 @@ private static async Task Echo(WebSocket webSocket)
     //Method that waits for data to be received from the WebSocket. The data is then stored in the buffer. Async so won't block rest of the data while it waits. 
 
     //ArraySegment<T> is a wrapped around an array that delimits a range of elements in that array. The original array must be 1-dimensional and have zero-based indexing. 
-    
+
     var receiveResult = await webSocket.ReceiveAsync(
         new ArraySegment<byte>(buffer), CancellationToken.None
     );
 
+    //Loop conditional below will continue as long as the WebSocket connection remains open. 
     while (!receiveResult.CloseStatus.HasValue)
     {
+        //The 'echo' part - the data that was just received is sent back over the WebSocket. 
         await webSocket.SendAsync(
             new ArraySegment<byte>(buffer, 0, receiveResult.Count),
             receiveResult.MessageType,
             receiveResult.EndOfMessage,
             CancellationToken.None);
 
+        //Reassigning receiveResult to receive the next chunk of data from the WebSocket. Allows the method to process a continous stream of data chunks from the WebSocket. Each iteration of the while loop handles one chunk of data. 
         receiveResult = await webSocket.ReceiveAsync(
-            new ArraySegment<byte>(buffer), CancellationToken.None);
+            new ArraySegment<byte>(buffer), CancellationToken.None
+            );
     }
 
+
+    //Once the WebSocket connection is closed (!receiveResult.CloseStatus.HasValue !== true) then close the WebSocket as per below:
     await webSocket.CloseAsync(
         receiveResult.CloseStatus.Value,
         receiveResult.CloseStatusDescription,
